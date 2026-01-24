@@ -21,7 +21,7 @@ inmemory-user-api/
 │ ├── handler/
 │ │ └── user_handler.go # HTTP handlers (CRUD)
 │ ├── model/
-│ │ └── user.go # User model
+│ │ └── user_model.go # User model
 │ └── store/
 │ └── user_store.go # In-memory user store
 └── README.md
