@@ -12,16 +12,21 @@ type UserStore struct {
 	users map[string]model.User
 }
 
-func NewUser() *UserStore {
+func NewUserStore() *UserStore {
 	return &UserStore{
+		mu: &sync.Mutex{},
 		users: make(map[string]model.User),
 	}
 }
 
-func (s *UserStore) CreateUser(user model.User) {
+func (s *UserStore) CreateUser(user model.User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, exists := s.users[user.ID]; exists {
+		return errors.New("User already exists")
+	}
 	s.users[user.ID] = user
+	return nil
 }
 
 func (s *UserStore) GetUser(id string) (model.User, error) {
