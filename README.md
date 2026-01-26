@@ -28,6 +28,17 @@ inmemory-user-api/
 ```
 ---
 
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | Get all users |
+| GET | `/users/{id}` | Get user by ID |
+| POST | `/users` | Create new user |
+| PUT | `/users/{id}` | Update user |
+| DELETE | `/users/{id}` | Delete user |
+
+---
 ## Running the Server
 ```
 go run main.go
