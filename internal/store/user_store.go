@@ -14,7 +14,7 @@ type UserStore struct {
 
 func NewUserStore() *UserStore {
 	return &UserStore{
-		mu: &sync.Mutex{},
+		mu:    &sync.Mutex{},
 		users: make(map[string]model.User),
 	}
 }
@@ -54,8 +54,7 @@ func (s *UserStore) GetAllUser() []model.User {
 func (s *UserStore) UpdateUser(id string, user model.User) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	if _, ok := s.users[id]; !ok {
+	if _, exists := s.users[id]; !exists {
 		return errors.New("User not found")
 	}
 	s.users[id] = user
@@ -66,7 +65,7 @@ func (s *UserStore) DeleteUser(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, ok := s.users[id]; !ok {
+	if _, exists := s.users[id]; !exists {
 		return errors.New("User not found")
 	}
 	delete(s.users, id)
