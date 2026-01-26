@@ -80,12 +80,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	if user.Name == "" || user.Email == "" || user.ID == "" {
+	if user.Name == "" || user.Email == "" {
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
-	if err := h.store.UpdateUser(user.ID, user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := h.store.UpdateUser(id, user); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
