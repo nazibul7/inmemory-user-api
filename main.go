@@ -15,14 +15,15 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/", UserHandler.GetAll)
+	mux.HandleFunc("GET /users", UserHandler.GetAll)
 	mux.HandleFunc("POST /user", UserHandler.Create)
-	mux.HandleFunc("GET /user", UserHandler.GetUser)
-	mux.HandleFunc("PUT /user", UserHandler.UpdateUser)
-	mux.HandleFunc("DELETE /user", UserHandler.DeleteUser)
+	mux.HandleFunc("GET /user/{id}", UserHandler.GetUser)
+	mux.HandleFunc("PUT /user/{id}", UserHandler.UpdateUser)
+	mux.HandleFunc("DELETE /user/{id}", UserHandler.DeleteUser)
+
 
 	server := app.NewServer(":9000", mux)
 
-	log.Println("Server running on :8080")
+	log.Println("Server running on :9000")
 	log.Fatal(server.ListenAndServe())
 }
