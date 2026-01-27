@@ -21,13 +21,24 @@ inmemory-user-api/
 │ ├── handler/
 │ │ └── user_handler.go # HTTP handlers (CRUD)
 │ ├── model/
-│ │ └── user.go # User model
+│ │ └── user_model.go # User model
 │ └── store/
 │ └── user_store.go # In-memory user store
 └── README.md
 ```
 ---
 
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | Get all users |
+| GET | `/users/{id}` | Get user by ID |
+| POST | `/users` | Create new user |
+| PUT | `/users/{id}` | Update user |
+| DELETE | `/users/{id}` | Delete user |
+
+---
 ## Running the Server
 ```
 go run main.go
