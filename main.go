@@ -21,9 +21,9 @@ func main() {
 	mux.HandleFunc("PUT /user/{id}", UserHandler.UpdateUser)
 	mux.HandleFunc("DELETE /user/{id}", UserHandler.DeleteUser)
 
-
 	server := app.NewServer(":9000", mux)
 
-	log.Println("Server running on :9000")
-	log.Fatal(server.ListenAndServe())
+	if err := app.RunWithGracefulShutdown(server, 30); err != nil {
+		log.Fatalf("Server error: %v", err)
+	}
 }
