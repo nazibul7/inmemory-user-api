@@ -24,6 +24,7 @@ func RunWithGracefulShutdown(server *http.Server, timeout time.Duration) error {
 	// Channel to listen for interrupt signals
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	// Tells the runtime: “Stop delivering OS signals to this channel”.Think of it as unsubscribe, not close.
 	defer signal.Stop(shutdown)
 
 	// Block until we receive an error or signal
