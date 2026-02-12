@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
+	"runtime"
 
 	"github.com/nazibul7/inmemory-user-api/internal/app"
 	"github.com/nazibul7/inmemory-user-api/internal/handler"
@@ -21,9 +24,21 @@ func main() {
 	mux.HandleFunc("PUT /user/{id}", UserHandler.UpdateUser)
 	mux.HandleFunc("DELETE /user/{id}", UserHandler.DeleteUser)
 
+	mux.HandleFunc("/debug/pprof/", pprof.Index)
+	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	server := app.NewServer(":9000", mux)
 
 	if err := app.RunWithGracefulShutdown(server, 30); err != nil {
 		log.Fatalf("Server error: %v", err)
+	}
+
+	if runtime.NumGoroutine() > 1 {
+		fmt.Println("\n Leaked goroutine stack trace:")
+		buf := make([]byte, 1<<16)
+		stackSize := runtime.Stack(buf, true)
+		fmt.Printf("%s\n", buf[:stackSize])
 	}
 }
