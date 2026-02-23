@@ -9,6 +9,7 @@ import (
 
 	"github.com/nazibul7/inmemory-user-api/internal/app"
 	"github.com/nazibul7/inmemory-user-api/internal/handler"
+	"github.com/nazibul7/inmemory-user-api/internal/middleware"
 	"github.com/nazibul7/inmemory-user-api/internal/store"
 )
 
@@ -17,6 +18,7 @@ func main() {
 	UserHandler := handler.NewUserHandler(UserStore)
 
 	mux := http.NewServeMux()
+	muxHandler := middleware.Recoverer(middleware.Logger(mux))
 
 	mux.HandleFunc("GET /users", UserHandler.GetAll)
 	mux.HandleFunc("POST /user", UserHandler.Create)
@@ -29,7 +31,7 @@ func main() {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	server := app.NewServer(":9000", mux)
+	server := app.NewServer(":9000", muxHandler)
 
 	if err := app.RunWithGracefulShutdown(server, 30); err != nil {
 		log.Fatalf("Server error: %v", err)
