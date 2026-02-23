@@ -20,6 +20,9 @@ inmemory-user-api/
 │ │ └── server.go # HTTP server setup
 │ ├── handler/
 │ │ └── user_handler.go # HTTP handlers (CRUD)
+│ ├── middleware/
+│ │ └── logger.go # Logging middleware
+│ │ └── panic.go # Recoverer middleware
 │ ├── model/
 │ │ └── user_model.go # User model
 │ └── store/
