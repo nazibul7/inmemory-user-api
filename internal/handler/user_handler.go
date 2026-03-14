@@ -104,8 +104,8 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.DeleteUser(id); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-
+	w.WriteHeader(http.StatusNoContent)
 }
