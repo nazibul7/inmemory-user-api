@@ -4,9 +4,11 @@ A simple REST Api written in Go using standard library **net/http** that perform
 
 This project demonstrates:
 - Clean Go project structure
-- In-memory data storage using `map` + `sync.RWMutex`
+- In-memory data storage using `map` + `sync.Mutex`
 - RESTful CRUD APIs
 - Go 1.22+ `ServeMux` method-based routing
+- Graceful shutdown with help of context
+- Add test case with 80% test coverage
 - Production-style server configuration (timeouts, explicit wiring)
 
 ---
