@@ -20,15 +20,18 @@ inmemory-user-api/
 ├── internal/
 │ ├── app/
 │ │ └── server.go # HTTP server setup
+| | └── graceful.go # graceful shutdown
 │ ├── handler/
 │ │ └── user_handler.go # HTTP handlers (CRUD)
+| | └── user_handler_test.go
 │ ├── middleware/
 │ │ └── logger.go # Logging middleware
 │ │ └── panic.go # Recoverer middleware
 │ ├── model/
 │ │ └── user_model.go # User model
 │ └── store/
-│ └── user_store.go # In-memory user store
+│ | └── user_store.go # In-memory user store
+| | └── user_store_test.go
 └── README.md
 ```
 ---
