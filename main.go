@@ -18,7 +18,9 @@ func main() {
 	UserHandler := handler.NewUserHandler(UserStore)
 
 	mux := http.NewServeMux()
-	muxHandler := middleware.Recoverer(middleware.Logger(mux))
+	muxHandler := middleware.RequestID(mux)
+	muxHandler = middleware.Logger(muxHandler)
+	muxHandler=middleware.Recoverer(muxHandler)
 
 	mux.HandleFunc("GET /users", UserHandler.GetAll)
 	mux.HandleFunc("POST /user", UserHandler.Create)
