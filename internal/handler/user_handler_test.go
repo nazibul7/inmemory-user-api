@@ -98,8 +98,6 @@ func TestCreate_Duplicate(t *testing.T) {
 		Email: "nazibul@example.com",
 	}
 	handler := setup()
-	// already storing a user in store
-	handler.store.CreateUser(user)
 
 	body, err := json.Marshal(user)
 	if err != nil {
@@ -108,6 +106,9 @@ func TestCreate_Duplicate(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
+	ctx := req.Context()
+	// already storing a user in store
+	handler.store.CreateUser(ctx, user)
 	w := httptest.NewRecorder()
 
 	handler.Create(w, req)
@@ -152,10 +153,12 @@ func TestGetAll_ReturnsAll(t *testing.T) {
 		Name:  "Hossain",
 		Email: "hossain@example.com",
 	}
-	handler.store.CreateUser(user1)
-	handler.store.CreateUser(user2)
-
+	
 	req := httptest.NewRequest(http.MethodGet, "/user", nil)
+
+	ctx := req.Context()
+	handler.store.CreateUser(ctx, user1)
+	handler.store.CreateUser(ctx, user2)
 
 	w := httptest.NewRecorder()
 
@@ -182,8 +185,10 @@ func TestGetUser_Success(t *testing.T) {
 		Name:  "Nazibul",
 		Email: "nazibul@example.com",
 	}
-	handler.store.CreateUser(user)
+
 	req := httptest.NewRequest(http.MethodGet, "/user/1", nil)
+	ctx := req.Context()
+	handler.store.CreateUser(ctx, user)
 	req.SetPathValue("id", "1")
 
 	w := httptest.NewRecorder()
@@ -243,8 +248,6 @@ func TestUpdateUser_Success(t *testing.T) {
 		Email: "nazibul@example.com",
 	}
 
-	handler.store.CreateUser(user)
-
 	updated := model.User{ID: "1", Name: "Updated Name", Email: "updated@example.com"}
 
 	body, err := json.Marshal(updated)
@@ -255,6 +258,8 @@ func TestUpdateUser_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/user/1", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
 
+	ctx := req.Context()
+	handler.store.CreateUser(ctx, user)
 	w := httptest.NewRecorder()
 
 	handler.UpdateUser(w, req)
@@ -303,7 +308,6 @@ func TestUpdateUser_MissingFields(t *testing.T) {
 		Name:  "Nazibul",
 		Email: "nazibul@example.com",
 	}
-	handler.store.CreateUser(user)
 
 	updated := model.User{ID: "1"} // missing Name & Email
 	body, err := json.Marshal(updated)
@@ -313,6 +317,9 @@ func TestUpdateUser_MissingFields(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPut, "/user/1", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
+
+	ctx := req.Context()
+	handler.store.CreateUser(ctx, user)
 
 	w := httptest.NewRecorder()
 	handler.UpdateUser(w, req)
@@ -329,10 +336,12 @@ func TestDeleteUser_Success(t *testing.T) {
 		Name:  "Nazibul",
 		Email: "nazibul@example.com",
 	}
-	handler.store.CreateUser(user)
 
 	req := httptest.NewRequest(http.MethodDelete, "/user/1", nil)
 	req.SetPathValue("id", "1")
+
+	ctx :=req.Context()
+	handler.store.CreateUser(ctx, user)
 
 	w := httptest.NewRecorder()
 	handler.DeleteUser(w, req)
