@@ -1,18 +1,26 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/nazibul7/inmemory-user-api/internal/model"
-	"github.com/nazibul7/inmemory-user-api/internal/store"
 )
 
-type UserHandler struct {
-	store *store.UserStore
+type UserStorer interface {
+	CreateUser(ctx context.Context, user model.User) error
+	GetUser(ctx context.Context, id string) (model.User, error)
+	GetAllUser(ctx context.Context) ([]model.User, error)
+	UpdateUser(ctx context.Context, id string, user model.User) error
+	DeleteUser(ctx context.Context, id string) error
 }
 
-func NewUserHandler(store *store.UserStore) *UserHandler {
+type UserHandler struct {
+	store UserStorer
+}
+
+func NewUserHandler(store UserStorer) *UserHandler {
 	return &UserHandler{
 		store: store,
 	}
