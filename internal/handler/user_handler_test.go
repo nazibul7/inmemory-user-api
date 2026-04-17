@@ -2,17 +2,56 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/nazibul7/inmemory-user-api/internal/model"
-	"github.com/nazibul7/inmemory-user-api/internal/store"
 )
 
-func setup() *UserHandler {
-	store := store.NewUserStore()
+type mockUserStore struct {
+	CreateFn func(ctx context.Context, user model.User) error
+	GetFn    func(ctx context.Context, id string) (model.User, error)
+	GetAllFn func(ctx context.Context) ([]model.User, error)
+	UpdateFn func(ctx context.Context, id string, user model.User) error
+	DeleteFn func(ctx context.Context, id string) error
+}
+
+func (m *mockUserStore) CreateUser(ctx context.Context, user model.User) error {
+	if m.CreateFn != nil {
+		return m.CreateFn(ctx, user)
+	}
+	return nil
+}
+func (m *mockUserStore) GetUser(ctx context.Context, id string) (model.User, error) {
+	if m.GetFn != nil {
+		return m.GetFn(ctx, id)
+	}
+	return model.User{}, nil
+}
+func (m *mockUserStore) GetAllUser(ctx context.Context) ([]model.User, error) {
+	if m.GetAllFn != nil {
+		return m.GetAllFn(ctx)
+	}
+	return []model.User{}, nil
+}
+func (m *mockUserStore) UpdateUser(ctx context.Context, id string, user model.User) error {
+	if m.UpdateFn != nil {
+		return m.UpdateFn(ctx, id, user)
+	}
+	return nil
+}
+func (m *mockUserStore) DeleteUser(ctx context.Context, id string) error {
+	if m.DeleteFn != nil {
+		return m.DeleteFn(ctx, id)
+	}
+	return nil
+}
+
+func setup(store *mockUserStore) *UserHandler {
 	handler := NewUserHandler(store)
 	return handler
 }
@@ -28,7 +67,7 @@ func TestCreate_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal user %v", err)
 	}
-	handler := setup()
+	handler := setup(&mockUserStore{})
 	// NewBuffer used instead of bytes.Buffer because we now already no more data will come & it is constant
 	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -53,7 +92,7 @@ func TestCreate_Success(t *testing.T) {
 }
 
 func TestCreate_InvalidJSON(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{})
 
 	invalidJSON := []byte(`{"id": "1", "name":`)
 
@@ -76,7 +115,7 @@ func TestCreate_MissingFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to marshal user %v", err)
 	}
-	handler := setup()
+	handler := setup(&mockUserStore{})
 	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -97,7 +136,10 @@ func TestCreate_Duplicate(t *testing.T) {
 		Name:  "Nazibul",
 		Email: "nazibul@example.com",
 	}
-	handler := setup()
+	mock := &mockUserStore{CreateFn: func(ctx context.Context, user model.User) error {
+		return errors.New("user already exist")
+	}}
+	handler := setup(mock)
 
 	body, err := json.Marshal(user)
 	if err != nil {
@@ -106,9 +148,10 @@ func TestCreate_Duplicate(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
-	ctx := req.Context()
-	// already storing a user in store
-	handler.store.CreateUser(ctx, user)
+	// Should use when real db is there maybe in integration test
+	// ctx := req.Context()
+	// // already storing a user in store
+	// handler.store.CreateUser(ctx, user)
 	w := httptest.NewRecorder()
 
 	handler.Create(w, req)
@@ -122,9 +165,9 @@ func TestCreate_Duplicate(t *testing.T) {
 //------------GetAll-----------------------------------------------
 
 func TestGetAll_Empty(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{})
 
-	req := httptest.NewRequest(http.MethodGet, "/user", nil)
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	w := httptest.NewRecorder()
 
 	handler.GetAll(w, req)
@@ -142,23 +185,16 @@ func TestGetAll_Empty(t *testing.T) {
 }
 
 func TestGetAll_ReturnsAll(t *testing.T) {
-	handler := setup()
-	user1 := model.User{
-		ID:    "1",
-		Name:  "Nazibul",
-		Email: "nazibul@example.com",
-	}
-	user2 := model.User{
-		ID:    "2",
-		Name:  "Hossain",
-		Email: "hossain@example.com",
-	}
-	
-	req := httptest.NewRequest(http.MethodGet, "/user", nil)
+	handler := setup(&mockUserStore{
+		GetAllFn: func(ctx context.Context) ([]model.User, error) {
+			return []model.User{
+				{ID: "1", Name: "Nazibul", Email: "nazibul@example.com"},
+				{ID: "2", Name: "Hossain", Email: "hossain@example.com"},
+			}, nil
+		},
+	})
 
-	ctx := req.Context()
-	handler.store.CreateUser(ctx, user1)
-	handler.store.CreateUser(ctx, user2)
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 
 	w := httptest.NewRecorder()
 
@@ -179,16 +215,19 @@ func TestGetAll_ReturnsAll(t *testing.T) {
 //--------GetUser--------------------------------------------------
 
 func TestGetUser_Success(t *testing.T) {
-	handler := setup()
-	user := model.User{
+	expected := model.User{
 		ID:    "1",
 		Name:  "Nazibul",
 		Email: "nazibul@example.com",
 	}
 
+	handler := setup(&mockUserStore{
+		GetFn: func(ctx context.Context, id string) (model.User, error) {
+			return model.User{ID: id, Name: "Nazibul", Email: "nazibul@example.com"}, nil
+		},
+	})
+
 	req := httptest.NewRequest(http.MethodGet, "/user/1", nil)
-	ctx := req.Context()
-	handler.store.CreateUser(ctx, user)
 	req.SetPathValue("id", "1")
 
 	w := httptest.NewRecorder()
@@ -197,17 +236,25 @@ func TestGetUser_Success(t *testing.T) {
 
 	res := w.Result()
 
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status %d, got %d", http.StatusOK, res.StatusCode)
+	}
+
 	var userData model.User
 	if err := json.NewDecoder(res.Body).Decode(&userData); err != nil {
 		t.Fatalf("could not decode response: %v", err)
 	}
-	if userData.ID != user.ID {
-		t.Errorf("expected ID %s, got %s", user.ID, userData.ID)
+	if userData != expected {
+		t.Errorf("expected %+v, got %+v", expected, userData)
 	}
 }
 
 func TestGetUser_NotFound(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{
+		GetFn: func(ctx context.Context, id string) (model.User, error) {
+			return model.User{}, errors.New("not found")
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodGet, "/user/1", nil)
 	req.SetPathValue("id", "1")
@@ -224,7 +271,7 @@ func TestGetUser_NotFound(t *testing.T) {
 }
 
 func TestGetUser_MissingID(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{})
 
 	req := httptest.NewRequest(http.MethodGet, "/user/", nil)
 	req.SetPathValue("id", "")
@@ -241,12 +288,19 @@ func TestGetUser_MissingID(t *testing.T) {
 }
 
 func TestUpdateUser_Success(t *testing.T) {
-	handler := setup()
-	user := model.User{
-		ID:    "1",
-		Name:  "Nazibul",
-		Email: "nazibul@example.com",
-	}
+	// The mock simulates the store saying "yes user exists,
+	// updated successfully" — you don't need to actually create the user first.
+	handler := setup(&mockUserStore{
+		UpdateFn: func(ctx context.Context, id string, user model.User) error {
+			if id != "1" {
+				t.Errorf("expected id 1, got %s", id)
+			}
+			if user.Name != "Updated Name" {
+				t.Errorf("expected name Updated Name, got %s", user.Name)
+			}
+			return nil
+		},
+	})
 
 	updated := model.User{ID: "1", Name: "Updated Name", Email: "updated@example.com"}
 
@@ -258,8 +312,6 @@ func TestUpdateUser_Success(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/user/1", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
 
-	ctx := req.Context()
-	handler.store.CreateUser(ctx, user)
 	w := httptest.NewRecorder()
 
 	handler.UpdateUser(w, req)
@@ -279,7 +331,11 @@ func TestUpdateUser_Success(t *testing.T) {
 }
 
 func TestUpdateUser_NotFound(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{
+		UpdateFn: func(ctx context.Context, id string, user model.User) error {
+			return errors.New("User not found")
+		},
+	})
 	user := model.User{
 		ID:    "1",
 		Name:  "Nazibul",
@@ -302,12 +358,7 @@ func TestUpdateUser_NotFound(t *testing.T) {
 }
 
 func TestUpdateUser_MissingFields(t *testing.T) {
-	handler := setup()
-	user := model.User{
-		ID:    "1",
-		Name:  "Nazibul",
-		Email: "nazibul@example.com",
-	}
+	handler := setup(&mockUserStore{})
 
 	updated := model.User{ID: "1"} // missing Name & Email
 	body, err := json.Marshal(updated)
@@ -318,9 +369,6 @@ func TestUpdateUser_MissingFields(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/user/1", bytes.NewReader(body))
 	req.SetPathValue("id", "1")
 
-	ctx := req.Context()
-	handler.store.CreateUser(ctx, user)
-
 	w := httptest.NewRecorder()
 	handler.UpdateUser(w, req)
 	res := w.Result()
@@ -330,18 +378,17 @@ func TestUpdateUser_MissingFields(t *testing.T) {
 }
 
 func TestDeleteUser_Success(t *testing.T) {
-	handler := setup()
-	user := model.User{
-		ID:    "1",
-		Name:  "Nazibul",
-		Email: "nazibul@example.com",
-	}
+	handler := setup(&mockUserStore{
+		DeleteFn: func(ctx context.Context, id string) error {
+			if id != "1" {
+				t.Errorf("expected id 1, got %s", id)
+			}
+			return nil
+		},
+	})
 
 	req := httptest.NewRequest(http.MethodDelete, "/user/1", nil)
 	req.SetPathValue("id", "1")
-
-	ctx :=req.Context()
-	handler.store.CreateUser(ctx, user)
 
 	w := httptest.NewRecorder()
 	handler.DeleteUser(w, req)
@@ -352,7 +399,11 @@ func TestDeleteUser_Success(t *testing.T) {
 }
 
 func TestDeleteUser_NotFound(t *testing.T) {
-	handler := setup()
+	handler := setup(&mockUserStore{
+		DeleteFn: func(ctx context.Context, id string) error {
+			return errors.New("not found")
+		},
+	})
 	req := httptest.NewRequest(http.MethodDelete, "/user/1", nil)
 	req.SetPathValue("id", "1")
 
