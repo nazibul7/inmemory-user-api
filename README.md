@@ -4,9 +4,11 @@ A simple REST Api written in Go using standard library **net/http** that perform
 
 This project demonstrates:
 - Clean Go project structure
-- In-memory data storage using `map` + `sync.RWMutex`
+- In-memory data storage using `map` + `sync.Mutex`
 - RESTful CRUD APIs
 - Go 1.22+ `ServeMux` method-based routing
+- Graceful shutdown with help of context
+- Add test case with 80% test coverage
 - Production-style server configuration (timeouts, explicit wiring)
 
 ---
@@ -18,12 +20,18 @@ inmemory-user-api/
 ├── internal/
 │ ├── app/
 │ │ └── server.go # HTTP server setup
+| | └── graceful.go # graceful shutdown
 │ ├── handler/
 │ │ └── user_handler.go # HTTP handlers (CRUD)
+| | └── user_handler_test.go
+│ ├── middleware/
+│ │ └── logger.go # Logging middleware
+│ │ └── panic.go # Recoverer middleware
 │ ├── model/
 │ │ └── user_model.go # User model
 │ └── store/
-│ └── user_store.go # In-memory user store
+│ | └── user_store.go # In-memory user store
+| | └── user_store_test.go
 └── README.md
 ```
 ---

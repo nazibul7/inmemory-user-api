@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"runtime"
+	"time"
 
 	"github.com/nazibul7/inmemory-user-api/internal/app"
 	"github.com/nazibul7/inmemory-user-api/internal/handler"
@@ -35,7 +36,7 @@ func main() {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	server := app.NewServer(":9000", muxHandler)
 
-	if err := app.RunWithGracefulShutdown(server, 30); err != nil {
+	if err := app.RunWithGracefulShutdown(server, 30*time.Second); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
 
