@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 
+	"github.com/nazibul7/inmemory-user-api/internal/middleware"
 	"github.com/nazibul7/inmemory-user-api/internal/model"
 )
 
@@ -26,17 +28,29 @@ func NewUserHandler(store UserStorer) *UserHandler {
 	}
 }
 
+func getRequestID(r *http.Request) string {
+	if id, ok := r.Context().Value(middleware.RequestIDKey).(string); ok {
+		return id
+	}
+	return "no-request-id"
+}
+
 // POST user
 func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
+	reqID := getRequestID(r)
+	log.Printf("requestID=%s Create called", reqID)
+
 	var user model.User
 
 	// Decode request body
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Printf("requestID=%s Create invalid JSON: %v", reqID, err)
 		http.Error(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
 
 	if user.Name == "" || user.Email == "" || user.ID == "" {
+		log.Printf("requestID=%s Create missing required fields", reqID)
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
@@ -47,9 +61,12 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	if err := h.store.CreateUser(ctx, user); err != nil {
+		log.Printf("requestID=%s conflict creating user id=%s: %v", reqID, user.ID, err)
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
+
+	log.Printf("requestID=%s user created id=%s", reqID, user.ID)
 
 	// WHY Encode here:
 	// - Simple response
@@ -73,11 +90,17 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // GET users
 func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	reqID := getRequestID(r)
+	log.Printf("requestID=%s GetAll called", reqID)
+
 	users, err := h.store.GetAllUser(r.Context())
 	if err != nil {
+		log.Printf("requestID=%s GetAll error fetching users: %v", reqID, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("requestID=%s GetAll returning %d users", reqID, len(users))
 
 	// WHY Encode here:
 	// - Read operation
@@ -94,17 +117,24 @@ func (h *UserHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 // GET user
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	reqID := getRequestID(r)
+	log.Printf("requestID=%s GetUser called", reqID)
+
 	id := r.PathValue("id")
 	if id == "" {
+		log.Printf("requestID=%s missing id in GetUser", reqID)
 		http.Error(w, "Missing id", http.StatusBadRequest)
 		return
 	}
 
 	user, err := h.store.GetUser(r.Context(), id)
 	if err != nil {
+		log.Printf("requestID=%s user not found id=%s in GetUser: %v", reqID, id, err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	log.Printf("requestID=%s user found id=%s", reqID, id)
 
 	// WHY Encode:
 	// - Small single object
@@ -120,27 +150,36 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 // PUT user/id
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	reqID := getRequestID(r)
+	log.Printf("requestID=%s UpdateUser called", reqID)
+
 	id := r.PathValue("id")
 	if id == "" {
+		log.Printf("requestID=%s missing id in UpdateUser", reqID)
 		http.Error(w, "Missing id", http.StatusBadRequest)
 		return
 	}
 
 	var user model.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		log.Printf("requestID=%s UpdateUser invalid JSON: %v", reqID, err)
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	if user.Name == "" || user.Email == "" {
+		log.Printf("requestID=%s UpdateUser missing required fields", reqID)
 		http.Error(w, "Missing required fields", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.store.UpdateUser(r.Context(), id, user); err != nil {
+		log.Printf("requestID=%s user not found id=%s in UpdateUser: %v", reqID, id, err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	log.Printf("requestID=%s user updated id=%s", reqID, id)
 
 	// Here we demonstrate Marshal usage (STRICT pattern)
 
@@ -151,6 +190,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	data, err := json.Marshal(user)
 	if err != nil {
+		log.Printf("requestID=%s UpdateUser marshal error: %v", reqID, err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -162,16 +202,23 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DELETE user/id
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	reqID := getRequestID(r)
+	log.Printf("requestID=%s DeleteUser called", reqID)
+
 	id := r.PathValue("id")
 	if id == "" {
+		log.Printf("requestID=%s missing id in DeleteUser", reqID)
 		http.Error(w, "Missing id", http.StatusBadRequest)
 		return
 	}
 
 	if err := h.store.DeleteUser(r.Context(), id); err != nil {
+		log.Printf("requestID=%s user not found id=%s in DeleteUser: %v", reqID, id, err)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
+	log.Printf("requestID=%s user deleted id=%s", reqID, id)
 
 	// No body needed → just status
 	// No Encode / Marshal required
